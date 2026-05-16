@@ -1,4 +1,4 @@
-# @andhikapraa/qris
+# @prasetya/qris
 
 Zero-dependency QRIS toolkit for Indonesian EMVCo payment codes: **parse**,
 **validate**, and convert **static → dynamic** (inject amount + optional
@@ -7,13 +7,13 @@ convenience fee, recompute the CRC). Ships dual ESM + CJS with TypeScript types.
 ## Install
 
 ```bash
-npm install @andhikapraa/qris
+npm install @prasetya/qris
 ```
 
 ## Usage
 
 ```ts
-import { convertQRIS, parseQRIS, validateQRIS } from "@andhikapraa/qris";
+import { convertQRIS, parseQRIS, validateQRIS } from "@prasetya/qris";
 
 const staticCode = "0002010102112657...6304ABCD"; // merchant's static QRIS
 
@@ -51,12 +51,12 @@ check. `amount` must be a positive integer (IDR has no decimals).
 
 ```bash
 # Interactive
-npx @andhikapraa/qris
+npx @prasetya/qris
 
 # Non-interactive (scriptable; exit 1 + stderr on error)
-npx @andhikapraa/qris <staticQris> <amount> [fixed|percentage <feeValue>]
-npx @andhikapraa/qris 00020101...6304ABCD 350135
-npx @andhikapraa/qris 00020101...6304ABCD 10000 percentage 0.7
+npx @prasetya/qris <staticQris> <amount> [fixed|percentage <feeValue>]
+npx @prasetya/qris 00020101...6304ABCD 350135
+npx @prasetya/qris 00020101...6304ABCD 10000 percentage 0.7
 ```
 
 ## Notes

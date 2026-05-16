@@ -2,7 +2,7 @@
 import { createInterface } from "node:readline";
 import { convertQRIS, parseQRIS, QRISError, validateQRIS } from "./index";
 
-const USAGE = `@andhikapraa/qris — Static → Dynamic QRIS Converter
+const USAGE = `@prasetya/qris — Static → Dynamic QRIS Converter
 
 Interactive:
   qris
@@ -52,7 +52,7 @@ async function runInteractive(): Promise<void> {
   const ask = (q: string): Promise<string> =>
     new Promise((resolve) => rl.question(q, (a) => resolve(a.trim())));
 
-  console.log("\n  @andhikapraa/qris — Static → Dynamic Converter\n");
+  console.log("\n  @prasetya/qris — Static → Dynamic Converter\n");
   const qris = await ask("[?] Input QRIS string: ");
 
   const validation = validateQRIS(qris);

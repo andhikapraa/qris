@@ -1,5 +1,5 @@
 {
-  "name": "@andhikapraa/qris",
+  "name": "@prasetya/qris",
   "version": "0.1.0",
   "description": "Zero-dependency QRIS parser, validator, and static→dynamic converter for Indonesian EMVCo payment codes",
   "type": "module",
