@@ -44,7 +44,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/andhikapraa/qris"
+    "url": "git+https://github.com/andhikapraa/qris.git"
+  },
+  "homepage": "https://github.com/andhikapraa/qris#readme",
+  "bugs": {
+    "url": "https://github.com/andhikapraa/qris/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=18"
