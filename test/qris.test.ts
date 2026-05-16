@@ -5,7 +5,6 @@ import {
   parseQRIS,
   parseTLV,
   convertQRIS,
-  computeTotal,
   QRISError,
 } from "../src/index";
 
@@ -188,24 +187,33 @@ describe("convertQRIS", () => {
     expect(p.amount).toBe("350135");
   });
 
-  it("embeds a fixed convenience fee (tags 55=02, 56) in EMVCo order", () => {
+  it("folds a fixed fee into the amount (no fee tags emitted)", () => {
     const dyn = convertQRIS(base, { amount: 10000, fee: { type: "fixed", value: 2000 } });
     expect(validateQRIS(dyn).valid).toBe(true);
     const p = parseQRIS(dyn);
-    expect(p.tipIndicator).toBe("fixed");
-    expect(p.tipFixed).toBe("2000");
-    const order = p.raw.map((t) => t.tag);
-    expect(order.indexOf("54")).toBeLessThan(order.indexOf("55"));
-    expect(order.indexOf("55")).toBeLessThan(order.indexOf("56"));
-    expect(order.indexOf("54")).toBeLessThan(order.indexOf("58"));
+    expect(p.amount).toBe("12000");
+    expect(p.tipIndicator).toBeUndefined();
+    expect(p.raw.some((t) => t.tag === "55" || t.tag === "56" || t.tag === "57")).toBe(false);
   });
 
-  it("embeds a percentage convenience fee (tags 55=03, 57)", () => {
+  it("folds a percentage fee (of the base) into the amount", () => {
     const dyn = convertQRIS(base, { amount: 10000, fee: { type: "percentage", value: 0.7 } });
+    expect(parseQRIS(dyn).amount).toBe("10070");
+  });
+
+  it("folds a combined fee: base + fixed + round(base × pct / 100)", () => {
+    // 10000 + 2000 + 1% of base (100) = 12100  (NOT 1% of 12000)
+    const dyn = convertQRIS(base, {
+      amount: 10000,
+      fee: { type: "combined", value: { fixed: 2000, percentage: 1 } },
+    });
     expect(validateQRIS(dyn).valid).toBe(true);
-    const p = parseQRIS(dyn);
-    expect(p.tipIndicator).toBe("percentage");
-    expect(p.tipPercentage).toBe("0.7");
+    expect(parseQRIS(dyn).amount).toBe("12100");
+  });
+
+  it("rounds the percentage surcharge to whole rupiah", () => {
+    // 33333 + round(33333 × 0.5 / 100=166.665) = 33333 + 167 = 33500
+    expect(parseQRIS(convertQRIS(base, { amount: 33333, fee: { type: "percentage", value: 0.5 } })).amount).toBe("33500");
   });
 
   it("is idempotent: re-converting a dynamic QRIS replaces the amount", () => {
@@ -215,19 +223,7 @@ describe("convertQRIS", () => {
     expect(parseQRIS(twice).amount).toBe("999");
   });
 
-  it("preserves an existing fee on re-conversion when no fee is given", () => {
-    const withFee = convertQRIS(base, {
-      amount: 10000,
-      fee: { type: "fixed", value: 2000 },
-    });
-    const reconv = convertQRIS(withFee, { amount: 5000 });
-    const p = parseQRIS(reconv);
-    expect(p.amount).toBe("5000");
-    expect(p.tipIndicator).toBe("fixed");
-    expect(p.tipFixed).toBe("2000");
-  });
-
-  it("preserves a prompt tip indicator on conversion", () => {
+  it("passes a source tip indicator through untouched", () => {
     const src = makeStaticQRIS({ withFee: "prompt" });
     const dyn = convertQRIS(src, { amount: 1000 });
     expect(validateQRIS(dyn).valid).toBe(true);
@@ -255,9 +251,18 @@ describe("convertQRIS", () => {
     ).toThrow(QRISError);
   });
 
-  it("rejects a fee value that serializes in exponential notation", () => {
+  it("rejects invalid combined-fee inputs", () => {
     expect(() =>
-      convertQRIS(base, { amount: 1000, fee: { type: "percentage", value: 1e-7 } })
+      convertQRIS(base, { amount: 1000, fee: { type: "combined", value: { fixed: 1.5, percentage: 1 } } })
+    ).toThrow(QRISError);
+    expect(() =>
+      convertQRIS(base, { amount: 1000, fee: { type: "combined", value: { fixed: 100, percentage: -1 } } })
+    ).toThrow(QRISError);
+  });
+
+  it("rejects a final amount that exceeds 13 digits", () => {
+    expect(() =>
+      convertQRIS(base, { amount: 9999999999999, fee: { type: "fixed", value: 9999999999999 } })
     ).toThrow(QRISError);
   });
 
@@ -293,43 +298,3 @@ describe("parseTLV", () => {
   });
 });
 
-describe("computeTotal", () => {
-  it("returns the base when no fee is given", () => {
-    expect(computeTotal(350135)).toBe(350135);
-    expect(computeTotal(350135, {})).toBe(350135);
-  });
-
-  it("adds a flat fixed fee", () => {
-    expect(computeTotal(10000, { fixed: 2000 })).toBe(12000);
-  });
-
-  it("adds a percentage of the base only, rounded to whole rupiah", () => {
-    expect(computeTotal(10000, { percentage: 0.7 })).toBe(10070);
-    // 33333 * 0.5% = 166.665 → rounds to 167
-    expect(computeTotal(33333, { percentage: 0.5 })).toBe(33500);
-  });
-
-  it("combines fixed + percentage with percentage on the base only", () => {
-    // base 10000, fixed 2000, 1% of base = 100 → 12100 (NOT 1% of 12000)
-    expect(computeTotal(10000, { fixed: 2000, percentage: 1 })).toBe(12100);
-  });
-
-  it("feeds straight into convertQRIS as the amount", () => {
-    const total = computeTotal(350000, { fixed: 135, percentage: 0 });
-    const dyn = convertQRIS(makeStaticQRIS(), { amount: total });
-    expect(validateQRIS(dyn).valid).toBe(true);
-    expect(parseQRIS(dyn).amount).toBe("350135");
-  });
-
-  it("rejects invalid inputs", () => {
-    expect(() => computeTotal(-1)).toThrow(QRISError);
-    expect(() => computeTotal(100.5)).toThrow(QRISError);
-    expect(() => computeTotal(1000, { fixed: 1.5 })).toThrow(QRISError);
-    expect(() => computeTotal(1000, { fixed: -10 })).toThrow(QRISError);
-    expect(() => computeTotal(1000, { percentage: -1 })).toThrow(QRISError);
-    expect(() =>
-      computeTotal(1000, { percentage: Number.POSITIVE_INFINITY })
-    ).toThrow(QRISError);
-    expect(() => computeTotal(0)).toThrow(QRISError); // total must be > 0
-  });
-});

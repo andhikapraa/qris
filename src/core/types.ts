@@ -35,14 +35,24 @@ export interface MerchantAccountInfo {
   fields: TLV[];
 }
 
+/**
+ * Optional surcharge folded into the transaction amount. The percentage
+ * applies to the base amount only. Same `{ type, value }` envelope for every
+ * case. EMVCo has no indicator for a combined fee (tag 55 is single-valued),
+ * and the indicator is inconsistently honored across bank apps, so this
+ * library always folds the fee into the amount rather than emitting tags
+ * 55/56/57 — the payer scans one all-in total.
+ */
+export type Fee =
+  | { type: "fixed"; value: number }
+  | { type: "percentage"; value: number }
+  | { type: "combined"; value: { fixed: number; percentage: number } };
+
 export interface ConvertOptions {
-  /** Transaction amount in the smallest currency unit (IDR rupiah, integer, > 0). */
+  /** Base transaction amount in IDR rupiah (integer, > 0). */
   amount: number;
-  fee?: {
-    type: "fixed" | "percentage";
-    /** Rupiah for "fixed", percent for "percentage" (e.g. 0.7 = 0.7%). */
-    value: number;
-  };
+  /** Optional surcharge folded into the final amount. */
+  fee?: Fee;
   /**
    * Skip validating the input QRIS before converting.
    * @default false

@@ -13,7 +13,7 @@ npm install @prasetya/qris
 ## Usage
 
 ```ts
-import { convertQRIS, computeTotal, parseQRIS, validateQRIS } from "@prasetya/qris";
+import { convertQRIS, parseQRIS, validateQRIS } from "@prasetya/qris";
 
 const staticCode = "0002010102112657...6304ABCD"; // merchant's static QRIS
 
@@ -23,30 +23,30 @@ if (!valid) throw new Error(errors.join("; "));
 // Static → dynamic for a Rp 350.135 charge
 const dynamic = convertQRIS(staticCode, { amount: 350135 });
 
-// With a fixed Rp 2.000 convenience fee
-convertQRIS(staticCode, { amount: 10000, fee: { type: "fixed", value: 2000 } });
-
-// With a 0.7% convenience fee
-convertQRIS(staticCode, { amount: 10000, fee: { type: "percentage", value: 0.7 } });
-
-// Combined fixed + percentage: EMVCo has no indicator for both, so fold it
-// into the amount. computeTotal = base + fixed + round(base × pct / 100).
-const total = computeTotal(10000, { fixed: 2000, percentage: 1 }); // 12100
-convertQRIS(staticCode, { amount: total });
+// Optional fee, one consistent { type, value } shape — folded into the amount:
+convertQRIS(staticCode, { amount: 10000, fee: { type: "fixed", value: 2000 } });      // → 12000
+convertQRIS(staticCode, { amount: 10000, fee: { type: "percentage", value: 0.7 } });  // → 10070
+convertQRIS(staticCode, {
+  amount: 10000,
+  fee: { type: "combined", value: { fixed: 2000, percentage: 1 } },                   // → 12100
+});
 
 parseQRIS(dynamic).amount; // "350135"
 ```
 
-`convertQRIS` validates the input and the amount by default and throws
-`QRISError` on bad data. Pass `{ skipValidation: true }` to skip the input
-check. `amount` must be a positive integer (IDR has no decimals).
+`amount` is the **base** (positive integer; IDR has no decimals). The optional
+`fee` is folded in: `final = base + fixed + round(base × percentage / 100)`
+(percentage on the base only). No EMVCo fee tags are emitted — tag 55 is
+single-valued and inconsistently honored, so the payer scans one all-in
+total. `convertQRIS` validates the input and amount by default and throws
+`QRISError` on bad data; pass `{ skipValidation: true }` to skip the input
+check.
 
 ## API
 
 | Export | Description |
 | --- | --- |
-| `convertQRIS(qris, { amount, fee?, skipValidation? })` | Static → dynamic; recomputes CRC. Idempotent on already-dynamic codes. If `fee` is omitted, any tip/convenience config in the source is preserved. |
-| `computeTotal(base, { fixed?, percentage? })` | Integer total = `base + fixed + round(base × percentage / 100)` (percentage on base only). For combined fees, which EMVCo can't express in tag 55; pass the result as `amount`. |
+| `convertQRIS(qris, { amount, fee?, skipValidation? })` | Static → dynamic; recomputes CRC. `fee` is `{ type: "fixed" \| "percentage" \| "combined", value }` folded into the amount. Idempotent; source tip tags pass through. |
 | `parseQRIS(qris)` | Structured `QRISData`. `method` is `"static"` \| `"dynamic"` \| `"unknown"`. |
 | `validateQRIS(qris)` | `{ valid, errors[] }` — header, strict TLV consumption, terminal CRC element, checksum, required tags, merchant GUI. |
 | `parseTLV(str)` | Raw recursive TLV element tree (lenient). |
