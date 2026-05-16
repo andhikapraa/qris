@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck # also typechecks test/
+      - run: npm test
+      - run: npm run build
+      - name: Smoke-test built artifacts (CLI + ESM + CJS)
+        run: |
+          set -euo pipefail
+          STAT=$(node -e "const {calculateCRC16}=require('./dist/index.cjs');const tlv=(t,v)=>t+String(Buffer.byteLength(v)).padStart(2,'0')+v;const mai=tlv('00','ID.CO.QRIS.WWW')+tlv('01','936000914550000000');const body='000201'+tlv('01','11')+tlv('26',mai)+tlv('52','5945')+tlv('53','360')+tlv('58','ID')+tlv('59','Toko Mamen')+tlv('60','Bandung')+tlv('61','10110')+'6304';process.stdout.write(body+calculateCRC16(body));")
+          DYN=$(node dist/cli.cjs "$STAT" 350135)
+          node -e "const q=require('./dist/index.cjs');if(!q.validateQRIS(process.argv[1]).valid||q.parseQRIS(process.argv[1]).amount!=='350135')process.exit(1);console.log('CJS + CLI ok');" "$DYN"
+          node --input-type=module -e "import {validateQRIS} from './dist/index.js';if(!validateQRIS(process.argv[1]).valid)process.exit(1);console.log('ESM ok');" "$DYN"

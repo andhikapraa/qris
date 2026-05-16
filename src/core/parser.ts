@@ -5,9 +5,21 @@ const TAG_NAMES: Record<string, string> = {
   "00": "Payload Format Indicator",
   "01": "Point of Initiation Method",
   "02": "Visa",
-  "03": "Mastercard",
+  "03": "Visa",
   "04": "Mastercard",
-  "15": "Visa",
+  "05": "Mastercard",
+  "06": "EMVCo",
+  "07": "EMVCo",
+  "08": "EMVCo",
+  "09": "Discover",
+  "10": "Discover",
+  "11": "Amex",
+  "12": "Amex",
+  "13": "JCB",
+  "14": "JCB",
+  "15": "UnionPay",
+  "16": "UnionPay",
+  "17": "EMVCo",
   "26": "Merchant Account Information",
   "27": "Merchant Account Information",
   "28": "Merchant Account Information",
@@ -48,42 +60,113 @@ const TAG_NAMES: Record<string, string> = {
   "63": "CRC",
 };
 
-/** Tags that contain nested TLV sub-elements (26-51 and 62) */
+/** Tags whose value is itself a nested TLV template (26-51 and 62) */
 const NESTED_TAGS = new Set([
   ...Array.from({ length: 26 }, (_, i) => String(i + 26).padStart(2, "0")),
   "62",
 ]);
 
+const _encoder = new TextEncoder();
+const _decoder = new TextDecoder("utf-8", { fatal: false });
+
+const ASCII_0 = 0x30;
+const ASCII_9 = 0x39;
+
+/** Read two ASCII digit bytes as an integer, or null if not both digits. */
+function readDigits2(bytes: Uint8Array, pos: number): number | null {
+  if (pos + 2 > bytes.length) return null;
+  const d0 = bytes[pos] as number;
+  const d1 = bytes[pos + 1] as number;
+  if (d0 < ASCII_0 || d0 > ASCII_9 || d1 < ASCII_0 || d1 > ASCII_9) return null;
+  return (d0 - ASCII_0) * 10 + (d1 - ASCII_0);
+}
+
+interface Region {
+  elements: TLV[];
+  /** Bytes consumed at this level before a clean stop or malformed halt. */
+  consumed: number;
+}
+
 /**
- * Parse a raw TLV string into an array of TLV elements.
- * Stops gracefully on malformed/truncated input.
+ * Parse a region of UTF-8 bytes into TLV elements. Lenient: stops at the
+ * first malformed element at this level. Structural problems (truncation,
+ * non-numeric length, value overrun, nested template not fully consumed)
+ * are appended to `problems` when provided, without aborting ancestors.
  */
-export function parseTLV(data: string): TLV[] {
+function parseRegion(bytes: Uint8Array, problems?: string[]): Region {
   const elements: TLV[] = [];
   let pos = 0;
 
-  while (pos < data.length) {
-    if (pos + 4 > data.length) break;
+  while (pos < bytes.length) {
+    if (pos + 4 > bytes.length) {
+      problems?.push(`truncated tag/length header at byte ${pos}`);
+      return { elements, consumed: pos };
+    }
 
-    const tag = data.substring(pos, pos + 2);
-    const length = parseInt(data.substring(pos + 2, pos + 4), 10);
+    const tag = _decoder.decode(bytes.subarray(pos, pos + 2));
+    const length = readDigits2(bytes, pos + 2);
+    if (length === null) {
+      problems?.push(`non-numeric length for tag ${tag} at byte ${pos + 2}`);
+      return { elements, consumed: pos };
+    }
 
-    if (isNaN(length) || pos + 4 + length > data.length) break;
+    const valStart = pos + 4;
+    const valEnd = valStart + length;
+    if (valEnd > bytes.length) {
+      problems?.push(
+        `value for tag ${tag} overruns payload (needs ${length} bytes)`
+      );
+      return { elements, consumed: pos };
+    }
 
-    const value = data.substring(pos + 4, pos + 4 + length);
-    const name = TAG_NAMES[tag] ?? `Unknown (${tag})`;
-
-    const element: TLV = { tag, name, length, value };
+    const valueBytes = bytes.subarray(valStart, valEnd);
+    const element: TLV = {
+      tag,
+      name: TAG_NAMES[tag] ?? `Unknown (${tag})`,
+      length,
+      value: _decoder.decode(valueBytes),
+    };
 
     if (NESTED_TAGS.has(tag)) {
-      element.children = parseTLV(value);
+      const sub = parseRegion(valueBytes, problems);
+      element.children = sub.elements;
+      if (sub.consumed !== valueBytes.length) {
+        problems?.push(
+          `nested template ${tag} not fully consumed (${sub.consumed}/${valueBytes.length} bytes)`
+        );
+      }
     }
 
     elements.push(element);
-    pos += 4 + length;
+    pos = valEnd;
   }
 
-  return elements;
+  return { elements, consumed: pos };
+}
+
+/**
+ * Parse a raw TLV string into an array of TLV elements.
+ * Lenient: stops gracefully on malformed/truncated input.
+ */
+export function parseTLV(data: string): TLV[] {
+  return parseRegion(_encoder.encode(data)).elements;
+}
+
+/**
+ * Strict parse for validation: reports every structural problem and whether
+ * the whole payload was consumed. Internal — not part of the public API.
+ */
+export function parseStrict(data: string): {
+  elements: TLV[];
+  problems: string[];
+} {
+  const bytes = _encoder.encode(data);
+  const problems: string[] = [];
+  const { elements, consumed } = parseRegion(bytes, problems);
+  if (consumed !== bytes.length) {
+    problems.push(`unparsed trailing data after byte ${consumed}`);
+  }
+  return { elements, problems };
 }
 
 /**
@@ -95,7 +178,10 @@ export function parseQRIS(qrisString: string): QRISData {
   const findTag = (tag: string) => raw.find((t) => t.tag === tag);
 
   const methodValue = findTag("01")?.value;
-  const method = methodValue === "12" ? "dynamic" : "static";
+  let method: QRISData["method"];
+  if (methodValue === "11") method = "static";
+  else if (methodValue === "12") method = "dynamic";
+  else method = "unknown";
 
   const tipIndicatorValue = findTag("55")?.value;
   let tipIndicator: QRISData["tipIndicator"];
@@ -103,7 +189,6 @@ export function parseQRIS(qrisString: string): QRISData {
   else if (tipIndicatorValue === "02") tipIndicator = "fixed";
   else if (tipIndicatorValue === "03") tipIndicator = "percentage";
 
-  // Extract merchant account information (tags 26-51)
   const merchantAccountInfo: MerchantAccountInfo[] = raw
     .filter((t) => {
       const tagNum = parseInt(t.tag, 10);

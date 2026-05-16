@@ -10,7 +10,7 @@ export interface TLV {
 /** Parsed QRIS data in a human-friendly structure */
 export interface QRISData {
   version: string;
-  method: "static" | "dynamic";
+  method: "static" | "dynamic" | "unknown";
   merchantAccountInfo: MerchantAccountInfo[];
   merchantCategoryCode: string;
   currency: string;

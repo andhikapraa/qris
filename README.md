@@ -40,24 +40,32 @@ check. `amount` must be a positive integer (IDR has no decimals).
 
 | Export | Description |
 | --- | --- |
-| `convertQRIS(qris, { amount, fee?, skipValidation? })` | Static → dynamic; recomputes CRC. Idempotent on already-dynamic codes. |
-| `parseQRIS(qris)` | Structured `QRISData` (merchant, method, amount, fees…). |
-| `validateQRIS(qris)` | `{ valid, errors[] }` — header, CRC, required tags. |
-| `parseTLV(str)` | Raw recursive TLV element tree. |
-| `calculateCRC16(str)` | CRC-16/CCITT-FALSE, 4-char uppercase hex. |
+| `convertQRIS(qris, { amount, fee?, skipValidation? })` | Static → dynamic; recomputes CRC. Idempotent on already-dynamic codes. If `fee` is omitted, any tip/convenience config in the source is preserved. |
+| `parseQRIS(qris)` | Structured `QRISData`. `method` is `"static"` \| `"dynamic"` \| `"unknown"`. |
+| `validateQRIS(qris)` | `{ valid, errors[] }` — header, strict TLV consumption, terminal CRC element, checksum, required tags, merchant GUI. |
+| `parseTLV(str)` | Raw recursive TLV element tree (lenient). |
+| `calculateCRC16(str)` | CRC-16/CCITT-FALSE over UTF-8 bytes, 4-char uppercase hex. |
 | `QRISError` | Thrown by `convertQRIS` on invalid input. |
 
 ## CLI
 
 ```bash
-npx @andhikapraa/qris   # interactive static → dynamic prompt
+# Interactive
+npx @andhikapraa/qris
+
+# Non-interactive (scriptable; exit 1 + stderr on error)
+npx @andhikapraa/qris <staticQris> <amount> [fixed|percentage <feeValue>]
+npx @andhikapraa/qris 00020101...6304ABCD 350135
+npx @andhikapraa/qris 00020101...6304ABCD 10000 percentage 0.7
 ```
 
 ## Notes
 
-- EMVCo TLV length fields are byte-counted; values >99 bytes throw `QRISError`.
-- Real-world QRIS payloads are ASCII — non-ASCII merchant data is encoded
-  correctly but is outside the spec's normal range.
+- TLV parsing, serialization, and CRC all operate on **UTF-8 bytes**, so
+  non-ASCII merchant data round-trips correctly and checksums consistently.
+- EMVCo TLV length fields are byte-counted (max 99); `amount` is a positive
+  integer ≤ 13 digits (IDR has no decimals); fee values reject exponential
+  notation. Violations throw `QRISError`.
 
 ## License
 
