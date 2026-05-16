@@ -1,0 +1,19 @@
+package.json
+  s_ec64ce8d8a2535::t_090d15dc2bd0bc 47-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "72f033dbaabdcafe85a1a32f8887a6c39dd8eff8",
+  "prompts": {},
+  "sessions": {
+    "s_ec64ce8d8a2535": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a03d3895-bcf0-4aeb-9b50-722fa9027394",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Muhammad Andhika Prasetya <andhikapraa@gmail.com>"
+    }
+  }
+}
