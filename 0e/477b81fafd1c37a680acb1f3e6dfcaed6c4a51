@@ -1,0 +1,45 @@
+test/qris.test.ts
+  s_ec64ce8d8a2535::t_4d78709b52db99 1-118
+src/core/crc16.ts
+  s_ec64ce8d8a2535::t_7468c20cb5bbf8 1-22
+tsconfig.json
+  s_ec64ce8d8a2535::t_5646b90de439c0 1-18
+src/core/converter.ts
+  s_ec64ce8d8a2535::t_efda4f1f34a03f 1-124
+LICENSE
+  s_ec64ce8d8a2535::t_15f1a8e0aa56f6 1-22
+src/core/parser.ts
+  s_ec64ce8d8a2535::t_de4968e496cb9c 1-144
+src/core/validator.ts
+  s_ec64ce8d8a2535::t_174c1c20a1b86d 1-79
+src/index.ts
+  s_ec64ce8d8a2535::t_c15c2dfc7baa19 1-12
+package.json
+  s_ec64ce8d8a2535::t_8d938cfaa3df69 1-58
+README.md
+  s_ec64ce8d8a2535::t_3167b155c6ed43 1-64
+tsup.config.ts
+  s_ec64ce8d8a2535::t_ca35ed4ce2b420 1-14
+.gitignore
+  s_ec64ce8d8a2535::t_183437c245ef19 1-4
+src/cli.ts
+  s_ec64ce8d8a2535::t_c04506cfd68960 1-70
+src/core/types.ts
+  s_ec64ce8d8a2535::t_469fa951bc4ccb 1-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "0e477b81fafd1c37a680acb1f3e6dfcaed6c4a51",
+  "prompts": {},
+  "sessions": {
+    "s_ec64ce8d8a2535": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a03d3895-bcf0-4aeb-9b50-722fa9027394",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Muhammad Andhika Prasetya <andhikapraa@gmail.com>"
+    }
+  }
+}
