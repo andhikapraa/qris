@@ -1,6 +1,6 @@
 {
   "name": "@prasetya/qris",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zero-dependency QRIS parser, validator, and static→dynamic converter for Indonesian EMVCo payment codes",
   "type": "module",
   "main": "./dist/index.cjs",
