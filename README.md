@@ -13,7 +13,7 @@ npm install @prasetya/qris
 ## Usage
 
 ```ts
-import { convertQRIS, parseQRIS, validateQRIS } from "@prasetya/qris";
+import { convertQRIS, computeTotal, parseQRIS, validateQRIS } from "@prasetya/qris";
 
 const staticCode = "0002010102112657...6304ABCD"; // merchant's static QRIS
 
@@ -29,6 +29,11 @@ convertQRIS(staticCode, { amount: 10000, fee: { type: "fixed", value: 2000 } });
 // With a 0.7% convenience fee
 convertQRIS(staticCode, { amount: 10000, fee: { type: "percentage", value: 0.7 } });
 
+// Combined fixed + percentage: EMVCo has no indicator for both, so fold it
+// into the amount. computeTotal = base + fixed + round(base × pct / 100).
+const total = computeTotal(10000, { fixed: 2000, percentage: 1 }); // 12100
+convertQRIS(staticCode, { amount: total });
+
 parseQRIS(dynamic).amount; // "350135"
 ```
 
@@ -41,6 +46,7 @@ check. `amount` must be a positive integer (IDR has no decimals).
 | Export | Description |
 | --- | --- |
 | `convertQRIS(qris, { amount, fee?, skipValidation? })` | Static → dynamic; recomputes CRC. Idempotent on already-dynamic codes. If `fee` is omitted, any tip/convenience config in the source is preserved. |
+| `computeTotal(base, { fixed?, percentage? })` | Integer total = `base + fixed + round(base × percentage / 100)` (percentage on base only). For combined fees, which EMVCo can't express in tag 55; pass the result as `amount`. |
 | `parseQRIS(qris)` | Structured `QRISData`. `method` is `"static"` \| `"dynamic"` \| `"unknown"`. |
 | `validateQRIS(qris)` | `{ valid, errors[] }` — header, strict TLV consumption, terminal CRC element, checksum, required tags, merchant GUI. |
 | `parseTLV(str)` | Raw recursive TLV element tree (lenient). |

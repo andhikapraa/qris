@@ -5,6 +5,7 @@ import {
   parseQRIS,
   parseTLV,
   convertQRIS,
+  computeTotal,
   QRISError,
 } from "../src/index";
 
@@ -289,5 +290,46 @@ describe("parseTLV", () => {
     const els = parseTLV(makeStaticQRIS());
     const mai = els.find((e) => e.tag === "26");
     expect(mai?.children?.some((c) => c.tag === "00")).toBe(true);
+  });
+});
+
+describe("computeTotal", () => {
+  it("returns the base when no fee is given", () => {
+    expect(computeTotal(350135)).toBe(350135);
+    expect(computeTotal(350135, {})).toBe(350135);
+  });
+
+  it("adds a flat fixed fee", () => {
+    expect(computeTotal(10000, { fixed: 2000 })).toBe(12000);
+  });
+
+  it("adds a percentage of the base only, rounded to whole rupiah", () => {
+    expect(computeTotal(10000, { percentage: 0.7 })).toBe(10070);
+    // 33333 * 0.5% = 166.665 → rounds to 167
+    expect(computeTotal(33333, { percentage: 0.5 })).toBe(33500);
+  });
+
+  it("combines fixed + percentage with percentage on the base only", () => {
+    // base 10000, fixed 2000, 1% of base = 100 → 12100 (NOT 1% of 12000)
+    expect(computeTotal(10000, { fixed: 2000, percentage: 1 })).toBe(12100);
+  });
+
+  it("feeds straight into convertQRIS as the amount", () => {
+    const total = computeTotal(350000, { fixed: 135, percentage: 0 });
+    const dyn = convertQRIS(makeStaticQRIS(), { amount: total });
+    expect(validateQRIS(dyn).valid).toBe(true);
+    expect(parseQRIS(dyn).amount).toBe("350135");
+  });
+
+  it("rejects invalid inputs", () => {
+    expect(() => computeTotal(-1)).toThrow(QRISError);
+    expect(() => computeTotal(100.5)).toThrow(QRISError);
+    expect(() => computeTotal(1000, { fixed: 1.5 })).toThrow(QRISError);
+    expect(() => computeTotal(1000, { fixed: -10 })).toThrow(QRISError);
+    expect(() => computeTotal(1000, { percentage: -1 })).toThrow(QRISError);
+    expect(() =>
+      computeTotal(1000, { percentage: Number.POSITIVE_INFINITY })
+    ).toThrow(QRISError);
+    expect(() => computeTotal(0)).toThrow(QRISError); // total must be > 0
   });
 });
