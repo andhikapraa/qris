@@ -1,0 +1,41 @@
+src/core/types.ts
+  s_ec64ce8d8a2535::t_64abdc1eb735c0 13
+src/core/converter.ts
+  s_ec64ce8d8a2535::t_d9b884da81a0fd 8-11,13-15,17,22-33,41-101,105-113,115-117,130-132,134-138,140-142,144-158,171-175,177,180-182,192-193,200-206
+.github/workflows/ci.yml
+  s_ec64ce8d8a2535::t_93930a55c0765f 1-20,22-23
+  s_ec64ce8d8a2535::t_b63948f67a1052 21,24-30
+src/core/validator.ts
+  s_ec64ce8d8a2535::t_c2ee01a94d56ec 2,5-6,8-11,31-33,41-63,90-92,96,99-107
+package.json
+  s_ec64ce8d8a2535::t_24abb78d9e1992 14-15
+src/core/parser.ts
+  s_ec64ce8d8a2535::t_f4b9c78c6427f9 8,10-22,63,69-89,91-94,96,100-104,106-111,113-120,122-128,131-137,141,144-169,181-184
+tsconfig.json
+  s_ec64ce8d8a2535::t_76d969f0932167 16-17
+README.md
+  s_ec64ce8d8a2535::t_7c6341261a9dd4 43-47,53-59,64-68
+src/cli.ts
+  s_ec64ce8d8a2535::t_276d804fb4e567 3,5,7-48,50-55,61,82,84,88,90,94-95,99-109
+test/qris.test.ts
+  s_ec64ce8d8a2535::t_8645eb81d74c31 6,11-18,20-38,40-50,63-70,78-83,98-150,155,161-175,190,196-199,210,217-236,240,247,251-277,284-291
+  s_ec64ce8d8a2535::t_0f5575b960f5bd 278-283
+src/core/crc16.ts
+  s_ec64ce8d8a2535::t_23f86069ec54e8 1-2,7-10,13-14,17-18,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "cff6854e28acc7d07ea62d17412820ac5074ef60",
+  "prompts": {},
+  "sessions": {
+    "s_ec64ce8d8a2535": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a03d3895-bcf0-4aeb-9b50-722fa9027394",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Muhammad Andhika Prasetya <andhikapraa@gmail.com>"
+    }
+  }
+}
